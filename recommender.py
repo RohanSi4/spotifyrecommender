@@ -419,22 +419,37 @@ class SpotifyRecommender:
         # Get mood-based target features
         mood_features = self.get_mood_features(mood)
         
-        # If we have seed tracks, use them; otherwise use user's top tracks
+        # If we have seed tracks, use them; otherwise try to get seeds
         if not seed_tracks and not seed_artists:
-            # Try to get user's top tracks as seeds
+            # Strategy 1: Use popular genres based on mood (most reliable)
+            mood_genres = {
+                'happy': ['pop', 'dance', 'indie-pop'],
+                'sad': ['indie', 'alternative', 'singer-songwriter'],
+                'energetic': ['rock', 'electronic', 'hip-hop'],
+                'calm': ['ambient', 'classical', 'jazz'],
+                'relaxed': ['acoustic', 'folk', 'chill'],
+                'party': ['dance', 'electronic', 'house'],
+                'focus': ['classical', 'ambient', 'instrumental'],
+                'workout': ['rock', 'electronic', 'hip-hop'],
+                'romantic': ['pop', 'r-n-b', 'soul']
+            }
+            seed_genres = mood_genres.get(mood.lower(), ['pop'])
+            
+            # Try to get recommendations with genres first (most reliable)
             try:
-                top_tracks = self.sp.current_user_top_tracks(limit=5, time_range='medium_term')
-                if top_tracks and top_tracks.get('items'):
-                    seed_tracks = [track['id'] for track in top_tracks['items'] if track.get('id')]
-            except Exception as e:
-                # If we can't get top tracks, try to use a default genre
-                # This ensures we always have at least one seed
-                seed_genres = ['pop']  # Default fallback genre
                 return self.get_spotify_recommendations(
                     seed_genres=seed_genres,
                     limit=limit,
                     **mood_features
                 )
+            except Exception as e:
+                # If genres fail, try to get user's top tracks
+                try:
+                    top_tracks = self.sp.current_user_top_tracks(limit=5, time_range='medium_term')
+                    if top_tracks and top_tracks.get('items') and len(top_tracks['items']) > 0:
+                        seed_tracks = [track['id'] for track in top_tracks['items'] if track.get('id')]
+                except:
+                    pass
         
         # Ensure we have valid seed tracks
         if seed_tracks:
