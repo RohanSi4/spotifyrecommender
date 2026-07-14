@@ -1,7 +1,7 @@
-# Signal — an explainable music recommender
+# Signal: an explainable music recommender
 
 Signal is an offline-first retrieval experiment for ranking tracks by audio
-features. It turns one or more reference tracks—or a mood profile—into a
+features. It turns one or more reference tracks, or a mood profile, into a
 normalized feature centroid, then ranks a candidate catalog by weighted
 distance. Every result includes its score and the two closest matching feature
 dimensions.
@@ -10,6 +10,14 @@ The default experience is a polished, deterministic demo. It needs no Spotify
 account, API key, or network access. Start Streamlit, leave **Demo catalog**
 selected, choose **Reference track**, and click **Rank similar tracks** for the
 canonical credential-free portfolio path.
+
+The repository also includes a standalone public browser experience in
+[`web/`](web/). It ports the same nine-feature weighted ranking method to
+TypeScript, needs no secrets, and is ready to deploy from the `web` root on
+Vercel. Use the browser app for the hosted portfolio demo and the Python app for
+Spotify OAuth experiments, the evaluator, and reference tests.
+
+**Live demo:** [signal-recommender.vercel.app](https://signal-recommender.vercel.app)
 
 ## Why this version is honest
 
@@ -129,6 +137,14 @@ pytest -q
 ruff check .
 ruff format --check .
 python evaluate.py --json
+```
+
+Verify the hosted experience separately:
+
+```bash
+cd web
+npm install
+npm run check
 ```
 
 No recommendation-quality claim should be added to this README or a portfolio
