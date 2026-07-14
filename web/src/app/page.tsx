@@ -5,88 +5,67 @@ export default function Home() {
   return (
     <main>
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="Signal home">
-          <SignalMark compact />
-          <span>Signal</span>
-        </a>
+        <a className="brand" href="#top" aria-label="Signal home"><SignalMark compact /><span>Signal</span></a>
         <nav aria-label="Page links">
           <a href="#try-it">Try it</a>
           <a href="#method">How it works</a>
-          <a href="https://github.com/RohanSi4/spotifyrecommender" target="_blank" rel="noreferrer">
-            GitHub <span aria-hidden="true">↗</span>
-          </a>
+          <a href="https://github.com/RohanSi4/spotifyrecommender" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
         </nav>
       </header>
 
       <section className="hero" id="top">
         <div className="hero-copy">
-          <p className="eyebrow"><span /> Explainable music discovery</p>
-          <h1>Music has a shape.<br /><em>Find what fits.</em></h1>
+          <p className="eyebrow"><span /> Music discovery that starts with you</p>
+          <h1>Good taste in.<br /><em>Better songs out.</em></h1>
           <p className="hero-lede">
-            Pick a song or choose the mood you want. Signal compares nine audio traits and tells
-            you why every recommendation made the list.
+            Start with any song on Spotify and follow the artist connections somewhere new. Or connect your account and dig past the tracks you already have on repeat.
           </p>
-          <a className="hero-cta" href="#try-it">
-            Find your next song <span aria-hidden="true">↓</span>
-          </a>
+          <a className="hero-cta" href="#try-it">Find something good <span aria-hidden="true">↓</span></a>
         </div>
 
         <div className="hero-art" aria-hidden="true">
-          <div className="orbit orbit-one" />
-          <div className="orbit orbit-two" />
+          <div className="orbit orbit-one" /><div className="orbit orbit-two" />
           <div className="vinyl">
-            <div className="vinyl-ring vinyl-ring-one" />
-            <div className="vinyl-ring vinyl-ring-two" />
-            <div className="vinyl-label">
-              <SignalMark />
-              <b>signal</b>
-              <span>play what fits</span>
-            </div>
+            <div className="vinyl-ring vinyl-ring-one" /><div className="vinyl-ring vinyl-ring-two" />
+            <div className="vinyl-label"><SignalMark /><b>signal</b><span>play something good</span></div>
           </div>
-          <p>09 traits<br />72 demo tracks<br />01 clear ranking</p>
+          <p>Real songs<br />Live search<br />Clear connections</p>
         </div>
       </section>
 
-      <section className="trust-strip" aria-label="Demo facts">
-        <p><strong>Works right now</strong> No account needed</p>
-        <p><strong>Clear by design</strong> Every match is explained</p>
-        <p><strong>Safe to explore</strong> No login and no tracking</p>
+      <section className="trust-strip" aria-label="Product facts">
+        <p><strong>Every song is real</strong> Search the live Spotify catalog</p>
+        <p><strong>No account required</strong> Start with any track right now</p>
+        <p><strong>Personal when you want it</strong> Use your own listening history</p>
       </section>
 
       <section className="workspace" id="try-it">
         <div className="section-intro">
-          <p className="eyebrow"><span /> Try the engine</p>
-          <h2>What do you want to hear?</h2>
-          <p>This public demo uses a made-up catalog, so it is fast, private, and always ready.</p>
+          <p className="eyebrow"><span /> Try Signal</p>
+          <h2>What have you been listening to?</h2>
+          <p>Give Signal one real song and it will build a path through releases, featured artists, and nearby corners of Spotify.</p>
         </div>
         <SignalApp />
       </section>
 
       <section className="method" id="method">
-        <div>
-          <p className="eyebrow"><span /> Under the hood</p>
-          <h2>Small enough to understand.<br />Useful enough to explore.</h2>
-        </div>
+        <div><p className="eyebrow"><span /> How it works</p><h2>Less magic box.<br />More good digging.</h2></div>
         <ol>
-          <li><span>01</span><div><strong>Turn sound into numbers</strong><p>Each track becomes a profile across tempo, energy, mood, danceability, and five more traits.</p></div></li>
-          <li><span>02</span><div><strong>Compare the shape</strong><p>The engine normalizes every trait and uses a weighted distance to compare like with like.</p></div></li>
-          <li><span>03</span><div><strong>Show the reason</strong><p>Results include the closest traits, not a mystery score with no context.</p></div></li>
+          <li><span>01</span><div><strong>Start anywhere</strong><p>Search Spotify for a song you really like, not one from a tiny preset list.</p></div></li>
+          <li><span>02</span><div><strong>Follow the connections</strong><p>Signal checks the artist&apos;s releases, collaborations, and the people connected through those songs.</p></div></li>
+          <li><span>03</span><div><strong>Know why it showed up</strong><p>Each pick tells you the actual artist or release connection. No made-up match percentage.</p></div></li>
         </ol>
       </section>
 
       <section className="disclosure">
         <SignalMark />
         <div>
-          <p className="eyebrow">A note on the demo</p>
-          <h2>Built around the API reality, not around it.</h2>
+          <p className="eyebrow">Built honestly</p>
+          <h2>Real Spotify songs, without pretending the API does more than it does.</h2>
           <p>
-            Spotify limits audio-feature access for most new developer apps, so this hosted version
-            uses a deterministic 72-track demo catalog. The ranking logic is real and fully testable.
-            The names and feature data are synthetic, and the scores are not claims about listener satisfaction.
+            Spotify retired the recommendation and audio-analysis endpoints for most new developer apps. Signal now works with the live catalog and your actual top songs instead. Public search works for everyone. Spotify currently limits account connections on new apps to five invited listeners, so personalized mixes are a small beta for now.
           </p>
-          <a href="https://developer.spotify.com/documentation/web-api/concepts/quota-modes" target="_blank" rel="noreferrer">
-            Read Spotify&apos;s access rules <span aria-hidden="true">↗</span>
-          </a>
+          <a href="https://developer.spotify.com/documentation/web-api/concepts/quota-modes" target="_blank" rel="noreferrer">Read Spotify&apos;s access rules <span aria-hidden="true">↗</span></a>
         </div>
       </section>
 

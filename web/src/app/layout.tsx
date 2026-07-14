@@ -14,20 +14,20 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://signal-recommender.vercel.app"),
-  title: "Signal | Explainable music recommendations",
+  title: "Signal | Find your next song",
   description:
-    "Pick a song or mood and see transparent recommendations from a deterministic audio-feature ranking engine.",
+    "Search any real Spotify song or connect your listening history to find music worth playing next.",
   openGraph: {
-    title: "Signal | Find music by feel",
+    title: "Signal | Good taste in. Better songs out.",
     description:
-      "A credential-free, explainable music recommendation demo by Rohan Singh.",
+      "Start with any Spotify song and follow real artist connections somewhere new.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Signal | Find music by feel",
+    title: "Signal | Good taste in. Better songs out.",
     description:
-      "A credential-free, explainable music recommendation demo by Rohan Singh.",
+      "Start with any Spotify song and follow real artist connections somewhere new.",
   },
 };
 

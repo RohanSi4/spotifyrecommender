@@ -1,48 +1,36 @@
-# Signal web demo
+# Signal web app
 
-This folder is the public, credential-free version of Signal. It is a standalone
-Next.js app designed to deploy from the `web` root on Vercel.
+Signal is a live music discovery app built with Next.js and Spotify. A visitor can search the real Spotify catalog, choose any track, and get a mix assembled from that artist's releases and collaborators. Invited Spotify users can also connect their account for deeper cuts based on their actual top songs.
 
-The interaction is real. A visitor can select any of 72 deterministic demo
-tracks or choose one of nine mood profiles. Ranking happens entirely in the
-browser using the same normalized, weighted nine-feature method documented in
-the Python engine at the repository root.
+The app does not invent audio traits, similarity scores, or song data. Every result includes real Spotify metadata, album art, a direct listening link, and a plain-language reason for appearing.
 
-## Run it
+## Local setup
 
 ```bash
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Register `http://localhost:3000/api/auth/callback` in the Spotify Developer Dashboard if you want to test account login. Public search works with client credentials and does not require a visitor to log in.
 
-## Verify it
+## Environment variables
+
+- `SPOTIFY_CLIENT_ID`: Spotify app client ID
+- `SPOTIFY_CLIENT_SECRET`: Spotify app client secret, server only
+- `SPOTIFY_REDIRECT_URI`: exact registered callback URL
+- `SIGNAL_SESSION_SECRET`: random string of at least 32 characters used to encrypt login cookies
+
+## Verify
 
 ```bash
 npm run check
 ```
 
-That command runs ESLint, the portable ranking tests, and a production build.
+This runs ESLint, session and rate-limit tests, TypeScript checks, and a production build.
 
-## Deploy it on Vercel
+## Production
 
-Use these project settings:
+The live app is [signal-recommender.vercel.app](https://signal-recommender.vercel.app). Vercel deploys the `web` directory from `main`. All four environment variables must be configured in Vercel, and the production callback must be registered with Spotify as `https://signal-recommender.vercel.app/api/auth/callback`.
 
-- Project name: `signal-recommender`
-- Root directory: `web`
-- Framework preset: Next.js
-- Install command: `npm install`
-- Build command: `npm run build`
-- Output directory: leave blank
-- Environment variables: none
-
-The app has no server-side data dependency, OAuth flow, cookie, or required
-secret. Vercel can deploy every push to the repository's main branch.
-
-## Honest scope
-
-Spotify restricts audio-feature access for most new development apps. This
-hosted demo therefore uses synthetic track names and feature profiles. It shows
-the real ranking behavior without presenting synthetic results as listener
-research or production recommendation quality.
+Spotify limits new development-mode apps to five invited users. That restriction only affects account-based personal mixes. Real catalog search and song-based mixes remain available to every visitor.

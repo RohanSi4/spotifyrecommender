@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Signal, explainable music recommendations";
+export const alt = "Signal, find your next song";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -29,7 +29,7 @@ export default function OpenGraphImage() {
             textTransform: "uppercase",
           }}
         >
-          Explainable music discovery
+          Real Spotify music discovery
         </div>
         <div
           style={{
@@ -42,11 +42,11 @@ export default function OpenGraphImage() {
             lineHeight: 0.96,
           }}
         >
-          <span>Music has a shape.</span>
-          <span style={{ color: "#c7ff5e" }}>Find what fits.</span>
+          <span>Good taste in.</span>
+          <span style={{ color: "#c7ff5e" }}>Better songs out.</span>
         </div>
         <div style={{ display: "flex", marginTop: 35, color: "#a9ada4", fontSize: 22 }}>
-          Pick a song or mood. See why every result matched.
+          Start with any real song. Follow the connections somewhere new.
         </div>
       </div>
 
