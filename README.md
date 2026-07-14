@@ -1,162 +1,136 @@
-# Spotify Recommender System
+# Signal — an explainable music recommender
 
-A comprehensive recommendation system for Spotify that uses multiple algorithms to suggest music based on your listening history and preferences.
+Signal is an offline-first retrieval experiment for ranking tracks by audio
+features. It turns one or more reference tracks—or a mood profile—into a
+normalized feature centroid, then ranks a candidate catalog by weighted
+distance. Every result includes its score and the two closest matching feature
+dimensions.
 
-## Features
+The default experience is a polished, deterministic demo. It needs no Spotify
+account, API key, or network access. Start Streamlit, leave **Demo catalog**
+selected, choose **Reference track**, and click **Rank similar tracks** for the
+canonical credential-free portfolio path.
 
-- **🎭 Mood-Based Recommendations**: Discover music based on your current mood (Happy, Sad, Energetic, Calm, Relaxed, Party, Focus, Workout, Romantic)
-- **Content-Based Recommendations**: Uses audio features to find similar tracks
-- **Spotify API Recommendations**: Leverages Spotify's built-in recommendation engine
-- **Hybrid Approach**: Combines content-based and Spotify recommendations
-- **Artist-Based Recommendations**: Discover music based on your favorite artists
-- **Similar Artists Discovery**: Find artists similar to ones you like
-- **🎨 Beautiful GUI**: Easy-to-use graphical interface with Spotify-themed design
-- **Playlist Creation**: Automatically create playlists with recommendations
+## Why this version is honest
 
-## Setup
+Earlier portfolio copy mentioned a 64% match rate at 25, sub-500 ms generation,
+and 42% fewer API calls. There was no checked-in dataset or benchmark capable of
+reproducing those claims, so they are intentionally **not project results**.
 
-1. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+This repository now includes an executable evaluator. On the included 72-track
+synthetic regression fixture, the current implementation produced:
 
-2. **Set up Spotify API credentials:**
-   - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-   - Create a new app
-   - Get your Client ID and Client Secret
-   - **Important**: Set redirect URI to `http://127.0.0.1:8888/callback` (Spotify doesn't allow `localhost`)
+- hit-rate@5: **100%**
+- mean reciprocal rank: **0.9931**
+- local ranking latency: emitted as median and p95 for every run, but not pinned
+  as a cross-machine performance claim
 
-3. **Create `.env` file:**
-   ```
-   SPOTIFY_CLIENT_ID=your_client_id
-   SPOTIFY_CLIENT_SECRET=your_client_secret
-   SPOTIFY_REDIRECT_URI=http://127.0.0.1:8888/callback
-   ```
+Run the evaluator on your machine for a latency sample. The fixture is made of
+deliberately separated synthetic mood clusters, so its quality numbers prove
+determinism and catch ranking regressions. They do **not** measure real-user
+satisfaction or production recommendation relevance.
 
-4. **First-time authentication:**
-   - Run `python spotify_token.py` to test authentication
-   - You'll be redirected to authorize the app
-   - After authorization, a cache file will be created
-
-## Usage
-
-### 🎨 GUI Application (Recommended)
-
-Launch the web-based graphical interface:
 ```bash
+python evaluate.py
+python evaluate.py --json --iterations 1000
+```
+
+## Try it
+
+Python 3.10+ is supported.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 streamlit run gui_streamlit.py
 ```
 
-The GUI will open in your browser automatically. It provides three modes:
-- **🎭 Mood-Based**: Select a mood and get personalized recommendations
-- **🎵 Song-Based**: Enter your favorite songs and get similar tracks
-- **🎤 Artist-Based**: Discover music based on artists you love
-
-Features:
-- Real-time recommendation generation
-- One-click playlist creation
-- Beautiful Spotify-themed interface
-- Multiple recommendation algorithms
-- Web-based (works on any device)
-
-### 📝 Command Line Interface
-
-### Mood-Based Recommendations (NEW!)
-Get recommendations based on your mood:
-```bash
-python main.py --mode mood --mood happy --limit 20
-```
-
-Available moods: `happy`, `sad`, `energetic`, `calm`, `relaxed`, `party`, `focus`, `workout`, `romantic`
-
-### View Your Listening Data
-```bash
-python main.py --collect-data
-```
-
-### Content-Based Recommendations
-Find tracks similar to specific songs in your library:
-```bash
-python main.py --mode content --seed-tracks "Song Name 1" "Song Name 2" --limit 20
-```
-
-### Spotify API Recommendations
-Use Spotify's recommendation engine:
-```bash
-python main.py --mode spotify --seed-tracks "Song Name" --limit 20
-```
-
-### Hybrid Recommendations (Recommended)
-Combine both approaches:
-```bash
-python main.py --mode hybrid --seed-tracks "Song Name 1" "Song Name 2" --limit 20
-```
-
-### Artist-Based Recommendations
-Get recommendations based on an artist:
-```bash
-python main.py --mode artist --seed-artist "Artist Name" --limit 20
-```
-
-### Discover Similar Artists
-Find artists similar to your favorites:
-```bash
-python main.py --mode similar-artists --seed-artist "Artist Name" --limit 10
-```
-
-### Create a Playlist
-Add `--create-playlist` to any recommendation command:
-```bash
-python main.py --mode hybrid --seed-tracks "Song Name" --create-playlist --playlist-name "My Recommendations"
-```
-
-## Examples
+The app opens in **Demo catalog** mode. Choose a reference track or mood and
+rank the fixture immediately. A small CLI path exercises the same ranking core:
 
 ```bash
-# Get 30 hybrid recommendations based on two songs and create a playlist
-python main.py --mode hybrid --seed-tracks "Bohemian Rhapsody" "Stairway to Heaven" --limit 30 --create-playlist --playlist-name "Classic Rock Mix"
-
-# Discover artists similar to The Beatles
-python main.py --mode similar-artists --seed-artist "The Beatles" --limit 15
-
-# Get Spotify recommendations for a song
-python main.py --mode spotify --seed-tracks "Blinding Lights" --limit 20
+python main.py --mood focus --limit 10
+python main.py --benchmark
 ```
 
-## Project Structure
+## Architecture
 
-- `spotify_token.py`: Authentication and Spotify client setup
-- `data_collector.py`: Collects user listening history and track features
-- `recommender.py`: Core recommendation algorithms (including mood-based)
-- `main.py`: Main application with CLI interface
-- `gui_streamlit.py`: Web-based graphical user interface (Streamlit)
-- `gui.py`: Desktop GUI application (tkinter - requires system dependencies)
+```text
+Streamlit / CLI
+      │
+      ├── deterministic demo catalog ─────────────┐
+      │                                           ▼
+      └── Spotify OAuth → library metadata → RecommendationEngine
+                                                  │
+                          validate → normalize → centroid → rank → explain
+```
 
-## How It Works
+- `recommender.py` contains the pure `RecommendationEngine`, feature schema,
+  mood profiles, ranking evaluator, and the thin optional Spotify adapter.
+- `demo_data.py` generates the publishable fixture from a fixed random seed.
+- `evaluate.py` runs leave-one-out hit-rate/MRR evaluation and local latency
+  measurement without credentials.
+- `gui_streamlit.py` is the maintained UI. `gui.py` is a compatibility launcher.
+- `data_collector.py` owns paginated Spotify library reads.
+- `tests/` covers ranking order, seed exclusion, invalid data, API restrictions,
+  pagination limits, and evaluator determinism.
 
-1. **Data Collection**: Gathers your saved tracks, playlists, and recently played songs
-2. **Feature Extraction**: Gets audio features (danceability, energy, tempo, etc.) for tracks
-3. **Mood Mapping**: Maps moods to target audio features (e.g., Happy = high valence & energy)
-4. **Similarity Calculation**: Uses cosine similarity or Euclidean distance to find similar tracks
-5. **Recommendation Generation**: Combines multiple approaches for best results
-6. **Playlist Creation**: Optionally creates a Spotify playlist with recommendations
+The ranking core uses nine continuous audio dimensions. `key` and `mode` are
+excluded because treating categorical encodings as continuous distance would
+produce misleading similarity. Tempo and loudness are range-normalized;
+perceptually useful dimensions such as energy and valence receive documented
+weights. Seed tracks are excluded from candidates, duplicates are removed, and
+ties are stable by track ID.
 
-### Mood-Based Recommendations
+## Optional Spotify connection
 
-The mood-based system uses Spotify's audio features to match tracks to your selected mood:
-- **Happy**: High valence, energy, and danceability
-- **Sad**: Low valence and energy
-- **Energetic**: High energy and tempo
-- **Calm/Relaxed**: Low energy, high acousticness
-- **Party**: High danceability, energy, and tempo
-- **Focus**: Low energy, low speechiness
-- **Workout**: Very high energy and tempo
-- **Romantic**: Moderate energy, high valence
+Create an app in the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard),
+allowlist the test account, and register this exact local callback:
+`http://127.0.0.1:8888/callback`.
 
-## Notes
+```bash
+cp .env.example .env
+# Fill in the three values, then:
+streamlit run gui_streamlit.py
+```
 
-- The first run will require browser authentication
-- Subsequent runs use cached credentials
-- Rate limiting is handled automatically
-- Recommendations are based on audio features and Spotify's algorithms
+Only `user-library-read` and `playlist-modify-private` are requested. Secrets and
+OAuth caches are ignored by Git. Tests use fakes and never require credentials.
 
+## Spotify API limitations (important)
+
+Spotify restricted Recommendations, Audio Features, Audio Analysis, and Related
+Artists for new and development-mode apps in November 2024. Existing extended
+quota apps were exempt at that time. In February 2026, Spotify also changed
+development-mode access and replaced playlist write paths; new extended-quota
+applications are limited to qualifying organizations. See Spotify's official
+[2024 endpoint announcement](https://developer.spotify.com/blog/2024-11-27-changes-to-the-web-api),
+[February 2026 migration guide](https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide),
+and [quota-mode documentation](https://developer.spotify.com/documentation/web-api/concepts/quota-modes).
+
+Practical effect:
+
+- Demo mode and all tests always work.
+- OAuth and library metadata can work for an allowlisted Premium test user.
+- Live content/mood ranking needs Audio Features access. Most development-mode
+  apps will receive a 403; the UI explains this instead of failing silently.
+- The legacy Spotify Recommendations method remains isolated for older
+  extended-quota apps, but the main UI does not depend on it.
+- Spotify applies a rolling-window rate limit and returns 429 with
+  `Retry-After`; calls are batched where the API permits. See the official
+  [rate-limit guide](https://developer.spotify.com/documentation/web-api/concepts/rate-limits).
+
+## Development
+
+```bash
+pip install -r requirements-dev.txt
+pytest -q
+ruff check .
+ruff format --check .
+python evaluate.py --json
+```
+
+No recommendation-quality claim should be added to this README or a portfolio
+unless the dataset, labels, protocol, and command that reproduces it are checked
+into the repository.

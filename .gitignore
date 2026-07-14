@@ -11,6 +11,7 @@ __pycache__/
 .spotify_cache
 
 # Virtual environment
+.venv/
 venv/
 env/
 ENV/
@@ -25,3 +26,11 @@ ENV/
 .DS_Store
 Thumbs.db
 
+# Test and tool caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local screenshots and benchmark output
+artifacts/
