@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { SignalMark } from "@/components/signal-mark";
 import { TrackResult } from "@/components/track-result";
+import { normalizeMixNumber, normalizeTrackHistory } from "@/lib/recommendation-variety";
 import type { PublicSpotifyTrack, SpotifyRecommendation } from "@/lib/spotify";
 
 type Mode = "song" | "personal";
@@ -16,6 +17,31 @@ type Connection = {
 };
 
 const QUICK_SEARCHES = ["Nights Frank Ocean", "SZA Snooze", "Tyler the Creator", "Drake Passionfruit"];
+const PERSONAL_MIX_STORAGE = "signal-personal-mixes-v1";
+
+type PersonalMixMemory = {
+  trackIds: string[];
+  mixNumber: number;
+};
+
+function readPersonalMixMemory(): PersonalMixMemory {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(PERSONAL_MIX_STORAGE) ?? "null") as {
+      trackIds?: unknown;
+      mixNumber?: unknown;
+    } | null;
+    return {
+      trackIds: normalizeTrackHistory(stored?.trackIds),
+      mixNumber: normalizeMixNumber(stored?.mixNumber),
+    };
+  } catch {
+    return { trackIds: [], mixNumber: 0 };
+  }
+}
+
+function savePersonalMixMemory(memory: PersonalMixMemory) {
+  window.localStorage.setItem(PERSONAL_MIX_STORAGE, JSON.stringify(memory));
+}
 
 async function readJson<T>(response: Response): Promise<T> {
   const body = await response.json() as T & { error?: string };
@@ -30,6 +56,7 @@ export function SignalApp() {
   const [selected, setSelected] = useState<PublicSpotifyTrack | null>(null);
   const [recommendations, setRecommendations] = useState<SpotifyRecommendation[]>([]);
   const [topTracks, setTopTracks] = useState<PublicSpotifyTrack[]>([]);
+  const [personalFreshCount, setPersonalFreshCount] = useState(0);
   const [resultTitle, setResultTitle] = useState("Your next songs will show up here");
   const [searching, setSearching] = useState(false);
   const [building, setBuilding] = useState(false);
@@ -118,14 +145,34 @@ export function SignalApp() {
     setBuilding(true);
     setError(null);
     try {
-      const response = await fetch("/api/spotify/for-you", { method: "POST" });
+      const memory = readPersonalMixMemory();
+      const response = await fetch("/api/spotify/for-you", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          excludeTrackIds: memory.trackIds,
+          mixNumber: memory.mixNumber,
+        }),
+      });
       const data = await readJson<{
         topTracks: PublicSpotifyTrack[];
         recommendations: SpotifyRecommendation[];
+        mixNumber: number;
+        freshCount: number;
       }>(response);
       setRecommendations(data.recommendations);
       setTopTracks(data.topTracks);
-      setResultTitle("Deeper cuts from artists you already play");
+      setPersonalFreshCount(data.freshCount);
+      setResultTitle(data.mixNumber === 0
+        ? "Fresh picks from across your Spotify taste"
+        : "Another route through your Spotify taste");
+      savePersonalMixMemory({
+        trackIds: normalizeTrackHistory([
+          ...data.recommendations.map(({ track }) => track.id),
+          ...memory.trackIds,
+        ]),
+        mixNumber: data.mixNumber + 1,
+      });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Spotify could not build your mix.");
     } finally {
@@ -139,8 +186,15 @@ export function SignalApp() {
     setMode("song");
     setTopTracks([]);
     setRecommendations([]);
+    setPersonalFreshCount(0);
     setResultTitle("Your next songs will show up here");
     setNotice("Spotify disconnected.");
+    window.localStorage.removeItem(PERSONAL_MIX_STORAGE);
+  }
+
+  function resetPersonalMixMemory() {
+    window.localStorage.removeItem(PERSONAL_MIX_STORAGE);
+    setNotice("Signal forgot the earlier mixes on this browser. Your next mix starts fresh.");
   }
 
   function selectTrack(track: PublicSpotifyTrack) {
@@ -240,11 +294,19 @@ export function SignalApp() {
                   <div><span>Connected as</span><strong>{connection.user?.displayName || "Spotify listener"}</strong></div>
                   <button type="button" onClick={disconnect}>Log out</button>
                 </div>
-                <p>Signal looks at your top songs, then finds real tracks from those artists that are not already in your regular rotation.</p>
-                <button className="rank-button" onClick={buildPersonalMix} disabled={building}>
+                <p>Signal checks your recent, medium-term, and longtime favorites, then branches into deeper releases and featured artists.</p>
+                <button className="rank-button" onClick={() => buildPersonalMix()} disabled={building}>
                   <SignalMark compact />
-                  {building ? "Finding deeper cuts..." : "Make my personal mix"}
+                  {building
+                    ? "Finding songs you have not seen here..."
+                    : topTracks.length > 0 ? "Give me 16 more songs" : "Make my personal mix"}
                 </button>
+                <p className="mix-memory-note">
+                  Signal remembers earlier picks on this browser so each new mix can go somewhere else.
+                  {topTracks.length > 0 ? (
+                    <button type="button" onClick={resetPersonalMixMemory}>Start over</button>
+                  ) : null}
+                </p>
               </>
             ) : (
               <>
@@ -271,7 +333,11 @@ export function SignalApp() {
             <p className="eyebrow"><span /> Live Spotify catalog</p>
             <h2>{resultTitle}</h2>
           </div>
-          {recommendations.length ? <p>{recommendations.length} real tracks</p> : null}
+          {recommendations.length ? (
+            <p>{topTracks.length > 0
+              ? `${personalFreshCount} fresh picks`
+              : `${recommendations.length} real tracks`}</p>
+          ) : null}
         </div>
 
         {topTracks.length > 0 ? (

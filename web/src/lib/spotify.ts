@@ -1,3 +1,11 @@
+import {
+  normalizeMixNumber,
+  normalizeTrackHistory,
+  rotatingSelection,
+  rotatingWindow,
+  stableVariation,
+} from "./recommendation-variety";
+
 const SPOTIFY_API = "https://api.spotify.com/v1";
 const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
 
@@ -226,17 +234,21 @@ async function artistCatalog(
   artist: SpotifyArtist,
   albumLimit: number,
   accessToken?: string,
+  albumRotation = 0,
 ): Promise<CatalogTrack[]> {
   const params = new URLSearchParams({
     include_groups: "album,single",
-    limit: String(Math.min(10, albumLimit)),
+    limit: String(Math.min(10, Math.max(8, albumLimit))),
   });
   const albums = await spotifyRequest<SpotifyPaging<SpotifyAlbum>>(
     `/artists/${encodeURIComponent(artist.id)}/albums?${params}`,
     accessToken,
   );
-  const uniqueAlbums = [...new Map(albums.items.map((album) => [album.id, album])).values()]
-    .slice(0, albumLimit);
+  const uniqueAlbums = rotatingWindow(
+    [...new Map(albums.items.map((album) => [album.id, album])).values()],
+    albumRotation,
+    albumLimit,
+  );
   const trackPages = await Promise.all(uniqueAlbums.map((album) =>
     spotifyRequest<SpotifyPaging<SpotifySimplifiedTrack>>(
       `/albums/${encodeURIComponent(album.id)}/tracks?limit=50`,
@@ -359,48 +371,140 @@ export async function recommendFromSpotifyTrack(trackId: string): Promise<{
   return { seed: publicTrack(seed), recommendations };
 }
 
-export async function recommendationsForSpotifyUser(accessToken: string): Promise<{
+export async function recommendationsForSpotifyUser(
+  accessToken: string,
+  options: { excludeTrackIds?: unknown; mixNumber?: unknown } = {},
+): Promise<{
   topTracks: PublicSpotifyTrack[];
   recommendations: SpotifyRecommendation[];
+  mixNumber: number;
+  freshCount: number;
 }> {
-  const params = new URLSearchParams({
-    time_range: "medium_term",
-    limit: "30",
-  });
-  const top = await spotifyRequest<SpotifyTopTracksResponse>(`/me/top/tracks?${params}`, accessToken);
-  const topTracks = top.items.map(publicTrack);
-  const excluded = new Set(top.items.map((track) => track.id));
-  const artistOrder = new Map<string, { artist: SpotifyArtist; rank: number }>();
-  for (const [trackRank, track] of top.items.entries()) {
-    for (const artist of track.artists) {
-      if (!artistOrder.has(artist.id)) artistOrder.set(artist.id, { artist, rank: trackRank });
+  const mixNumber = normalizeMixNumber(options.mixNumber);
+  const previouslyShown = new Set(normalizeTrackHistory(options.excludeTrackIds));
+  const tasteRanges = [
+    { timeRange: "short_term", limit: 20, weight: 1.25 },
+    { timeRange: "medium_term", limit: 30, weight: 1 },
+    { timeRange: "long_term", limit: 20, weight: 0.8 },
+  ] as const;
+  const topResponses = await Promise.all(tasteRanges.map(async (range) => {
+    const params = new URLSearchParams({
+      time_range: range.timeRange,
+      limit: String(range.limit),
+    });
+    const response = await spotifyRequest<SpotifyTopTracksResponse>(
+      `/me/top/tracks?${params}`,
+      accessToken,
+    );
+    return { ...range, tracks: response.items };
+  }));
+
+  const trackTaste = new Map<string, { track: SpotifyTrack; score: number; bestRank: number }>();
+  const artistTaste = new Map<string, { artist: SpotifyArtist; score: number; bestRank: number }>();
+  for (const range of topResponses) {
+    for (const [trackRank, track] of range.tracks.entries()) {
+      const score = range.weight * (range.limit - trackRank);
+      const knownTrack = trackTaste.get(track.id);
+      trackTaste.set(track.id, {
+        track,
+        score: (knownTrack?.score ?? 0) + score,
+        bestRank: Math.min(knownTrack?.bestRank ?? Number.POSITIVE_INFINITY, trackRank),
+      });
+      for (const artist of track.artists) {
+        const knownArtist = artistTaste.get(artist.id);
+        artistTaste.set(artist.id, {
+          artist,
+          score: (knownArtist?.score ?? 0) + score / Math.sqrt(track.artists.length),
+          bestRank: Math.min(knownArtist?.bestRank ?? Number.POSITIVE_INFINITY, trackRank),
+        });
+      }
     }
   }
-  const favoriteArtists = [...artistOrder.values()]
-    .sort((left, right) => left.rank - right.rank)
-    .slice(0, 6);
-  const catalogs = await Promise.all(favoriteArtists.map(({ artist }) =>
-    artistCatalog(artist, 2, accessToken),
+
+  const rankedTopTracks = [...trackTaste.values()]
+    .sort((left, right) => right.score - left.score || left.bestRank - right.bestRank);
+  const topTracks = rankedTopTracks.map(({ track }) => publicTrack(track));
+  const excludedTopTracks = new Set(rankedTopTracks.map(({ track }) => track.id));
+  const favoriteArtistPool = [...artistTaste.values()]
+    .sort((left, right) => right.score - left.score || left.bestRank - right.bestRank)
+    .slice(0, 16);
+  const favoriteArtists = rotatingSelection(favoriteArtistPool, mixNumber, 8);
+  const selectedFavoriteIds = new Set(favoriteArtists.map(({ artist }) => artist.id));
+  const favoriteCatalogs = await Promise.all(favoriteArtists.map(({ artist }, index) =>
+    artistCatalog(artist, 2, accessToken, mixNumber * 2 + index),
   ));
-  const candidates = dedupeTracks(catalogs.flat(), excluded);
+  const favoriteCatalog = favoriteCatalogs.flat();
+
+  const collaboratorCounts = new Map<string, {
+    artist: SpotifyArtist;
+    count: number;
+    connectedThrough: SpotifyArtist;
+  }>();
+  for (const { track, sourceArtist } of favoriteCatalog) {
+    for (const artist of track.artists) {
+      if (artistTaste.has(artist.id) || selectedFavoriteIds.has(artist.id)) continue;
+      const current = collaboratorCounts.get(artist.id);
+      collaboratorCounts.set(artist.id, {
+        artist,
+        count: (current?.count ?? 0) + 1,
+        connectedThrough: current?.connectedThrough ?? sourceArtist,
+      });
+    }
+  }
+  const collaboratorPool = [...collaboratorCounts.values()]
+    .sort((left, right) => right.count - left.count || left.artist.name.localeCompare(right.artist.name));
+  const collaborators = rotatingWindow(collaboratorPool, mixNumber * 3, 4);
+  const collaboratorCatalogs = await Promise.all(collaborators.map(({ artist }, index) =>
+    artistCatalog(artist, 1, accessToken, mixNumber + index),
+  ));
+
+  const candidates = dedupeTracks(
+    [...favoriteCatalog, ...collaboratorCatalogs.flat()],
+    excludedTopTracks,
+  );
+  const currentYear = new Date().getUTCFullYear();
   const ranked = candidates.filter((candidate) => candidatePenalty(candidate.track) < 28)
     .map((candidate) => {
-    const favorite = artistOrder.get(candidate.sourceArtist.id);
-    const rank = favorite?.rank ?? 99;
-    const year = releaseYear(candidate.track);
-    return {
-      score: 100 - rank * 2 - candidate.albumRank * 3 - candidatePenalty(candidate.track),
-      sourceArtistId: candidate.sourceArtist.id,
-      recommendation: {
-        track: publicTrack(candidate.track),
-        reasons: [
-          `a deeper cut from ${candidate.sourceArtist.name}`,
-          year ? `from ${year}` : "outside your usual rotation",
-        ],
-        connection: rank < 10 ? "closest" as const : "explore" as const,
-      },
-    };
-    }).sort((left, right) => right.score - left.score || left.recommendation.track.name.localeCompare(right.recommendation.track.name));
+      const favorite = artistTaste.get(candidate.sourceArtist.id);
+      const favoriteRank = favoriteArtistPool.findIndex(
+        ({ artist }) => artist.id === candidate.sourceArtist.id,
+      );
+      const collaborator = collaboratorCounts.get(candidate.sourceArtist.id);
+      const year = releaseYear(candidate.track);
+      const seenBefore = previouslyShown.has(candidate.track.id);
+      const isFavorite = Boolean(favorite);
+      const reasons = isFavorite
+        ? [
+            `from ${candidate.sourceArtist.name}, past the songs you already play`,
+            year ? `a ${year} find` : "from deeper in the catalog",
+          ]
+        : [
+            collaborator
+              ? `connected through ${collaborator.connectedThrough.name}`
+              : "from an artist just outside your usual rotation",
+            year && year >= currentYear - 2 ? "a newer find" : "a different corner of the catalog",
+          ];
+      const score = (isFavorite ? 102 - Math.max(0, favoriteRank) * 2.5 : 72 + (collaborator?.count ?? 0) * 2)
+        - candidate.albumRank * 2.5
+        - Math.min(candidate.trackPosition, 15) * 0.12
+        - candidatePenalty(candidate.track)
+        + (year && year >= currentYear - 2 ? 4 : 0)
+        + stableVariation(candidate.track.id, mixNumber) * 18
+        - (seenBefore ? 120 : 0);
+      return {
+        score,
+        seenBefore,
+        sourceArtistId: candidate.sourceArtist.id,
+        recommendation: {
+          track: publicTrack(candidate.track),
+          reasons,
+          connection: isFavorite
+            ? favoriteRank < 6 ? "closest" as const : "explore" as const
+            : collaborator ? "connected" as const : "explore" as const,
+        },
+      };
+    }).sort((left, right) => right.score - left.score
+      || left.recommendation.track.name.localeCompare(right.recommendation.track.name));
 
   const perArtist = new Map<string, number>();
   const perAlbum = new Map<string, number>();
@@ -411,7 +515,12 @@ export async function recommendationsForSpotifyUser(accessToken: string): Promis
     perArtist.set(entry.sourceArtistId, count + 1);
     perAlbum.set(entry.recommendation.track.albumId, albumCount + 1);
     return true;
-  }).slice(0, 12).map((entry) => entry.recommendation);
+  }).slice(0, 16);
 
-  return { topTracks: topTracks.slice(0, 8), recommendations };
+  return {
+    topTracks: topTracks.slice(0, 8),
+    recommendations: recommendations.map((entry) => entry.recommendation),
+    mixNumber,
+    freshCount: recommendations.filter((entry) => !entry.seenBefore).length,
+  };
 }

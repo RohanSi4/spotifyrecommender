@@ -18,7 +18,7 @@ export default function Home() {
           <p className="eyebrow"><span /> Music discovery that starts with you</p>
           <h1>Good taste in.<br /><em>Better songs out.</em></h1>
           <p className="hero-lede">
-            Start with any song on Spotify and follow the artist connections somewhere new. Or connect your account and dig past the tracks you already have on repeat.
+            Start with any song on Spotify and follow the artist connections somewhere new. Or connect your account for a personal mix that keeps finding different ways through your taste.
           </p>
           <a className="hero-cta" href="#try-it">Find something good <span aria-hidden="true">↓</span></a>
         </div>
@@ -36,7 +36,7 @@ export default function Home() {
       <section className="trust-strip" aria-label="Product facts">
         <p><strong>Every song is real</strong> Search the live Spotify catalog</p>
         <p><strong>No account required</strong> Start with any track right now</p>
-        <p><strong>Personal when you want it</strong> Use your own listening history</p>
+        <p><strong>Personal without getting stuck</strong> New mixes avoid earlier picks</p>
       </section>
 
       <section className="workspace" id="try-it">
@@ -52,7 +52,7 @@ export default function Home() {
         <div><p className="eyebrow"><span /> How it works</p><h2>Less magic box.<br />More good digging.</h2></div>
         <ol>
           <li><span>01</span><div><strong>Start anywhere</strong><p>Search Spotify for a song you really like, not one from a tiny preset list.</p></div></li>
-          <li><span>02</span><div><strong>Follow the connections</strong><p>Signal checks the artist&apos;s releases, collaborations, and the people connected through those songs.</p></div></li>
+          <li><span>02</span><div><strong>Follow the connections</strong><p>Signal checks releases, collaborations, and your short, medium, and longtime Spotify favorites.</p></div></li>
           <li><span>03</span><div><strong>Know why it showed up</strong><p>Each pick tells you the actual artist or release connection. No made-up match percentage.</p></div></li>
         </ol>
       </section>
@@ -63,7 +63,7 @@ export default function Home() {
           <p className="eyebrow">Built honestly</p>
           <h2>Real Spotify songs, without pretending the API does more than it does.</h2>
           <p>
-            Spotify retired the recommendation and audio-analysis endpoints for most new developer apps. Signal now works with the live catalog and your actual top songs instead. Public search works for everyone. Spotify currently limits account connections on new apps to five invited listeners, so personalized mixes are a small beta for now.
+            Spotify retired the recommendation and audio-analysis endpoints for most new developer apps. Signal now works with the live catalog and your actual top songs instead. Personal mixes rotate through different artists, releases, and collaborators, while a small browser-only history keeps earlier picks out of the way. Public search works for everyone. Spotify currently limits account connections on new apps to five invited listeners, so personalized mixes are a small beta for now.
           </p>
           <a href="https://developer.spotify.com/documentation/web-api/concepts/quota-modes" target="_blank" rel="noreferrer">Read Spotify&apos;s access rules <span aria-hidden="true">↗</span></a>
         </div>

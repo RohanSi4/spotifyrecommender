@@ -1,8 +1,8 @@
 # Signal web app
 
-Signal is a live music discovery app built with Next.js and Spotify. A visitor can search the real Spotify catalog, choose any track, and get a mix assembled from that artist's releases and collaborators. Invited Spotify users can also connect their account for deeper cuts based on their actual top songs.
+Signal is a live music discovery app built with Next.js and Spotify. A visitor can search the real Spotify catalog, choose any track, and get a mix assembled from that artist's releases and collaborators. Invited Spotify users can also connect their account for rotating personal mixes based on their short, medium, and longtime favorites.
 
-The app does not invent audio traits, similarity scores, or song data. Every result includes real Spotify metadata, album art, a direct listening link, and a plain-language reason for appearing.
+The app does not invent audio traits, similarity scores, or song data. Every result includes real Spotify metadata, album art, a direct listening link, and a plain-language reason for appearing. Personal mixes sample different artists and catalog windows, follow real featured-artist connections, and keep up to 120 previously shown track IDs in that browser so the next mix can avoid repeats.
 
 ## Local setup
 

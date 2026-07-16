@@ -475,6 +475,25 @@ footer > a:hover {
   line-height: 1.55;
 }
 
+.personal-block > .mix-memory-note {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mix-memory-note button {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--signal);
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .search-wrap {
   position: relative;
 }

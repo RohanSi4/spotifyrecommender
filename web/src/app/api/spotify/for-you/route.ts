@@ -21,8 +21,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Connect Spotify to build your mix." }, { status: 401 });
   }
   try {
+    const body = await request.json().catch(() => null) as {
+      excludeTrackIds?: unknown;
+      mixNumber?: unknown;
+    } | null;
     const { session, refreshed } = await refreshSessionIfNeeded(stored);
-    const response = NextResponse.json(await recommendationsForSpotifyUser(session.accessToken));
+    const response = NextResponse.json(await recommendationsForSpotifyUser(session.accessToken, {
+      excludeTrackIds: body?.excludeTrackIds,
+      mixNumber: body?.mixNumber,
+    }));
     if (refreshed) {
       response.cookies.set(SPOTIFY_SESSION_COOKIE, encryptSpotifySession(session), {
         ...spotifyCookieOptions,
