@@ -2,57 +2,94 @@
 
 Signal helps you get from one song you love to music worth playing next.
 
-**Live app:** [signal-recommender.vercel.app](https://signal-recommender.vercel.app)
+[Try the live app](https://signal-recommender.vercel.app) ·
+[Read the case study](https://rohansingh04.com/projects/spotify-recommender)
 
-## What it does now
+![Signal building a mix from Spotify releases and artist connections](docs/signal.png)
 
-The production app in [`web/`](web/) uses the live Spotify catalog instead of a tiny synthetic song list.
+## What it does
 
-- Search any real Spotify song without logging in.
-- Explore releases from the seed artist and artists connected through collaborations.
-- Open every result directly in Spotify with real album art and metadata.
-- Connect an invited Spotify account to find deeper cuts from artists already in your rotation.
-- See a real reason for every pick instead of a made-up match percentage.
+- Searches Spotify's real catalog without requiring a login
+- Builds a mix from the seed artist's releases and real collaborators
+- Shows real artwork, album details, release dates, and Spotify links
+- Explains the artist or release connection behind every pick
+- Lets invited listeners connect Spotify for mixes based on artists they already play
 
-Spotify no longer gives most new developer apps access to Recommendations, Audio Features, Audio Analysis, or Related Artists. Signal works with the endpoints that are actually available in 2026 and is clear about what each connection means. Spotify also limits development-mode account access to five invited users, while the public search experience works for everyone.
+There is no made-up match percentage here. Signal uses relationships the current
+Spotify API can actually support and tells you why each song made the list.
 
-## Web app
+## How the recommendations work
 
-```bash
+Signal starts with a song, walks through its artists' albums and singles, then
+follows recurring collaborators into their catalogs. The ranking removes
+duplicates, penalizes low-value versions, and caps how much one artist or album
+can take over the mix.
+
+Account-based mixes rotate between favorite artists, their catalogs, and their
+collaborators. Recent recommendations stay in browser-local history so a refresh
+can favor songs you have not just seen. If the available catalog is exhausted,
+the app says so clearly and starts a fresh rotation.
+
+## Architecture
+
+~~~text
+Browser
+  |-- public song search
+  |-- optional Spotify OAuth
+  |-- recent recommendation history
+  |
+  v
+Next.js + TypeScript
+  |-- server-held Spotify credentials
+  |-- encrypted account sessions
+  |-- catalog and collaborator discovery
+  |-- ranking, deduping, and variety rules
+  |
+  v
+Spotify Web API
+~~~
+
+Spotify credentials stay on the server. OAuth state is checked on callback,
+expired access tokens can refresh, and public endpoints have basic rate limits.
+The browser only receives the track details it needs.
+
+## Run the web app
+
+~~~bash
 cd web
 npm install
 cp .env.example .env.local
 npm run dev
-```
+~~~
 
-See [`web/README.md`](web/README.md) for Spotify callback setup, environment variables, and deployment details.
+See [the web setup guide](web/README.md) for Spotify callback URLs, environment
+variables, and Vercel deployment. Run the full web check with:
 
-Verify the full web app with:
-
-```bash
+~~~bash
 cd web
 npm run check
-```
+~~~
 
-## Original Python recommender
+Spotify limits development-mode apps to invited accounts. Public song search
+and song-based mixes still work for everyone; login is an optional deeper path.
 
-The repository still includes the original offline Python ranking work as a reference implementation. It turns track features or a mood profile into a normalized centroid, ranks a candidate catalog by weighted distance, and explains the closest dimensions. Its 72-track fixture is synthetic and exists for deterministic regression testing, not as a claim about real listener satisfaction.
+## Where it started
 
-```bash
+The repository also keeps the original Python audio-feature recommender. It
+normalizes a mood or seed profile, ranks a deterministic candidate set by
+weighted distance, and explains the closest dimensions.
+
+Its 72-track fixture is only for repeatable tests. It is not the catalog behind
+the live product.
+
+~~~bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
 pytest -q
 ruff check .
 python evaluate.py --json
-```
+~~~
 
-Main Python files:
-
-- `recommender.py`: ranking engine, validation, and the legacy Spotify adapter
-- `demo_data.py`: reproducible synthetic fixture
-- `evaluate.py`: hit-rate, reciprocal-rank, and local latency checks
-- `gui_streamlit.py`: original Streamlit interface
-- `tests/`: regression and API-boundary coverage
-
-The web app and Python prototype are intentionally separate. The web app is the current portfolio product. The Python code preserves the path that led there.
+The Python prototype shows where the idea began. The Spotify-backed TypeScript
+app is the current product.
